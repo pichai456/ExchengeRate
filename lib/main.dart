@@ -1,7 +1,6 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'ExchengeRate.dart';
+import 'package:learn/util/api_service.dart';
+import 'models/ExchengeRate.dart';
 import 'MoneyBox.dart';
 
 void main() => runApp(MyApp());
@@ -28,46 +27,17 @@ class _HomeState extends State<Home> {
   /* ------------------------------API-------------------------------------------- */
   late Future<ExchengeRate> _dataFormAPI;
 
-  /* -----------------------------โหลดข้อมูล--------------------------------------------- */
-  // ScrollController _sc = new ScrollController();
-  // static int _page = 0;
-  // bool isLoading = false;
-
   /* ------------------------------Input-------------------------------------------- */
   double _inputAmount = 1;
 
   @override
   void initState() {
     super.initState();
-    _dataFormAPI = getExchangeRate();
-    // _sc.addListener(() {
-    //   if (_sc.position.pixels == _sc.position.maxScrollExtent) {
-    //     _getMoreData(_page);
-    //   }
-    // });
-  }
-
-  // void _getMoreData(int index) {
-  //   if (!isLoading) {
-  //     setState(() {
-  //       isLoading = true;
-  //     });
-  //   }
-  // }
-
-  Future<ExchengeRate> getExchangeRate() async {
-    final url = Uri.parse('https://api.exchangerate-api.com/v4/latest/THB');
-    final response = await http.get(url);
-    return ExchengeRate.fromJson(jsonDecode(response.body));
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    // _sc.dispose();
+    _dataFormAPI = ApiException.getExchangeRate();
   }
 
   Widget build(BuildContext context) {
+    double size = MediaQuery.of(context).size.width;
     return Scaffold(
         resizeToAvoidBottomInset: false,
         appBar: AppBar(
@@ -78,36 +48,62 @@ class _HomeState extends State<Home> {
             ),
           ),
         ),
-        body: Column(
-          children: <Widget>[
-            SizedBox(
-              child: TextField(
-                decoration: InputDecoration(
-                    hintText: 'กรุณากรอกตัวเลข', labelText: 'THB', border: InputBorder.none),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  setState(() {
-                    _inputAmount = double.parse(value);
-                  });
-                },
-              ),
-            ),
-            FutureBuilder<ExchengeRate>(
-                future: _dataFormAPI,
-                builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
-                  // ----------------------------------ถ้าดึงข้อมูลมาครบ---------------------------------------- */
-                  if (snapshot.hasData) {
-                    var _resultRate = snapshot.data.rates;
-                    return widgetContext(_resultRate);
-                  }
-                  // --------------------------------ถ้ายังดึงไม่ครบ ------------------------------------------ */
-                  else if (snapshot.hasError) {
-                    return Text('${snapshot.error}');
-                  }
-                  return const LinearProgressIndicator();
-                }),
-          ],
+        body: GestureDetector(
+          onTap: () => FocusScope.of(context).requestFocus(FocusNode()),
+          behavior: HitTestBehavior.opaque,
+          child: Column(
+            children: <Widget>[
+              buildInput(size),
+              buildShowAllExchengeRate(),
+            ],
+          ),
         ));
+  }
+
+  Container buildInput(double size) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(0, 20, 0, 10),
+      width: size * 0.7,
+      height: size * 0.1,
+      child: TextField(
+        decoration: InputDecoration(
+          enabledBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFFFF6F00)),
+            borderRadius: BorderRadius.all(Radius.circular(30)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderSide: BorderSide(color: Color(0xFFFF6F01)),
+            borderRadius: BorderRadius.all(Radius.circular(30)),
+          ),
+          hintText: 'กรุณากรอกตัวเลข',
+          labelText: 'THB',
+          border: InputBorder.none,
+        ),
+        keyboardType: TextInputType.number,
+        onChanged: (value) {
+          setState(() {
+            _inputAmount = double.parse(value);
+          });
+        },
+      ),
+    );
+  }
+
+  FutureBuilder<ExchengeRate> buildShowAllExchengeRate() {
+    return FutureBuilder<ExchengeRate>(
+        future: _dataFormAPI,
+        builder: (BuildContext context, AsyncSnapshot<dynamic> snapshot) {
+          // ----------------------------------ถ้าดึงข้อมูลมาครบ---------------------------------------- */
+          if (snapshot.hasData) {
+            var _resultRate = snapshot.data.rates;
+            return widgetContext(_resultRate);
+          }
+          // --------------------------------ถ้ายังดึงไม่ครบ ------------------------------------------ */
+          else if (snapshot.hasError) {
+            return Text('${snapshot.error}');
+          }
+          return const LinearProgressIndicator();
+        });
   }
 
   Expanded widgetContext(_resultRate) {
